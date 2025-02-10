@@ -122,8 +122,8 @@ def get_last(b):
 def setup_credentials():
     """Set up HITRAN credentials and store them in .env file"""
     # Get credentials from user
-    username = input("Enter HITRAN username: ")
-    password = getpass("Enter HITRAN password: ")
+    username = os.environ.get("HITRAN_USERNAME") or input("Enter HITRAN username: ")
+    password = os.environ.get("HITRAN_PASSWORD") or getpass("Enter HITRAN password: ")
     return username, password
 
 
