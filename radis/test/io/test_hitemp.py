@@ -8,8 +8,13 @@ Created on Tue Feb  2 13:51:40 2021
 
 import pytest
 
-from radis.api.hitempapi import keep_only_relevant
+from radis.api.hitempapi import (
+    HITEMP_MOLECULES,
+    HITEMPDatabaseManager,
+    keep_only_relevant,
+)
 from radis.io.hitemp import fetch_hitemp
+from radis.misc.config import getDatabankList
 from radis.misc.utils import NotInstalled, not_installed_vaex_args
 
 try:
@@ -173,6 +178,7 @@ def test_fetch_hitemp_OH_vaex(verbose=True, *args, **kwargs):
         databank_name="HITEMP-OH-TEST-ENGINE-VAEX",
         engine="vaex",
     )
+
 
 # #This test is outdated since version 2024 of CO2 HITEMP. This is a single file of 6 GB now.
 # @pytest.mark.needs_connection
