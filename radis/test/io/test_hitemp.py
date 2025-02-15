@@ -7,6 +7,9 @@ Created on Tue Feb  2 13:51:40 2021
 
 
 import pytest
+import os
+import json
+from radis.misc.config import CONFIG_PATH_JSON
 
 from radis.api.hitempapi import (
     HITEMP_MOLECULES,
@@ -23,6 +26,50 @@ except ImportError:
     vaex = NotInstalled(*not_installed_vaex_args)
 
 pytestmark = pytest.mark.random_order(disabled=True)
+
+
+@pytest.fixture(autouse=True)
+def setup_hitran_credentials():
+    """Set up HITRAN credentials from environment variables before tests"""
+    username = os.environ.get('HITRAN_USERNAME')
+    password = os.environ.get('HITRAN_PASSWORD')
+    
+    if username and password:
+        # Create or load config
+        config = {}
+        if os.path.exists(CONFIG_PATH_JSON):
+            with open(CONFIG_PATH_JSON, 'r') as f:
+                config = json.load(f)
+        
+        # Update credentials
+        if 'credentials' not in config:
+            config['credentials'] = {}
+        
+        config['credentials']['hitran'] = {
+            'username': username,
+            'password': password
+        }
+        
+        # Save config
+        with open(CONFIG_PATH_JSON, 'w') as f:
+            json.dump(config, f, indent=4)
+        
+        # Set restrictive permissions
+        os.chmod(CONFIG_PATH_JSON, 0o600)
+    
+    yield
+    
+    # Cleanup after tests if needed
+    if os.path.exists(CONFIG_PATH_JSON):
+        try:
+            with open(CONFIG_PATH_JSON, 'r') as f:
+                config = json.load(f)
+            if 'credentials' in config:
+                config['credentials'].pop('hitran', None)
+            with open(CONFIG_PATH_JSON, 'w') as f:
+                json.dump(config, f, indent=4)
+        except:
+            pass
 
 
 @pytest.mark.needs_connection
