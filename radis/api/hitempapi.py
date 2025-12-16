@@ -613,35 +613,27 @@ def parse_one_CO2_block(
 
 
 def _download_single_chunk(
-    start_wavno, end_wavno, out_file, session, engine, verbose=True, position=0
+    start_wavno, end_wavno, out_file, session, engine, verbose=True
 ):
     """Download and process a single CO2 chunk."""
-    try:
-        if engine == "vaex":
-            fcache = _fcache_file_name(out_file, engine)
-            fcache_str = str(fcache)
-            if os.path.exists(fcache_str.replace(".hdf5", ".h5")):
-                update_pytables_to_vaex(fcache_str.replace(".hdf5", ".h5"))
+    if engine == "vaex":
+        fcache = _fcache_file_name(out_file, engine)
+        fcache_str = str(fcache)
+        if os.path.exists(fcache_str.replace(".hdf5", ".h5")):
+            update_pytables_to_vaex(fcache_str.replace(".hdf5", ".h5"))
 
-        desc = f"Chunk {start_wavno:.0f}-{end_wavno:.0f} cm⁻¹"
-        with tqdm(
-            total=1, desc=desc, position=position, leave=True, disable=not verbose
-        ) as pbar:
-            partial_download_co2_chunk(
-                start_wavno,
-                end_wavno,
-                session,
-                out_file,
-                verbose=False,  # Suppress verbose to avoid cluttered output
-            )
-            pbar.update(1)
-        if verbose:
-            print(f"Completed chunk {start_wavno:.0f}-{end_wavno:.0f} cm⁻¹")
-        return True
+    try:
+        partial_download_co2_chunk(
+            start_wavno,
+            end_wavno,
+            session,
+            out_file,
+            verbose=verbose,
+        )
     except Exception as e:
         if verbose:
             print(
-                f" Error downloading chunk {start_wavno:.0f}-{end_wavno:.0f} cm⁻¹: {e}"
+                f"Error downloading chunk {start_wavno:.0f}-{end_wavno:.0f} cm⁻¹: {e}"
             )
         raise
 
@@ -752,9 +744,8 @@ def read_and_write_chunked_for_CO2(
                         session,
                         engine,
                         verbose,
-                        idx,
                     )
-                    for idx, (start, end, out_file) in enumerate(files_to_download)
+                    for (start, end, out_file) in files_to_download
                 ]
                 for future in as_completed(futures):
                     future.result()
@@ -762,12 +753,14 @@ def read_and_write_chunked_for_CO2(
             # Single chunk download - no threading overhead
             start_wavno, end_wavno, out_file = files_to_download[0]
             _download_single_chunk(
-                start_wavno, end_wavno, out_file, session, engine, verbose, 0
+                start_wavno, end_wavno, out_file, session, engine, verbose
             )
 
     else:
         if verbose:
-            print(f"\nAll files already cached. Loading from `.h5` or `.hdf5` files.")
+            print(
+                f"\nAll files already downloaded. Loading from `.h5` or `.hdf5` files."
+            )
 
     with tqdm(
         total=len(local_paths), desc="Processing chunks", disable=not verbose
