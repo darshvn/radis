@@ -252,8 +252,14 @@ def test_fetch_hitemp_partial_download_CO2(verbose=True, *args, **kwargs):
 
     assert df.shape[1] == 24
     assert len(local_files) == 2, f"Expected 2 files, got {len(local_files)}"
-    for f in local_files:
-        assert basename(f).startswith("CO2_02_"), f"Unexpected file name: {basename(f)}"
+    expected_files = [
+        "CO2_02_02273-02446_HITEMP2024.par",
+        "CO2_02_02446-02659_HITEMP2024.par",
+    ]
+    actual_files = sorted([basename(f) for f in local_files])
+    assert actual_files == sorted(
+        expected_files
+    ), f"Expected files {expected_files}, got {actual_files}"
 
 
 def test_read_wav_index():
