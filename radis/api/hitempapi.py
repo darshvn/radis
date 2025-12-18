@@ -615,7 +615,7 @@ def parse_one_CO2_block(
 def _download_single_chunk(
     start_wavno, end_wavno, out_file, session, engine, verbose=True
 ):
-    """Download and process a single CO2 chunk."""
+    """Download a single CO2 chunk."""
     if engine == "vaex":
         fcache = _fcache_file_name(out_file, engine)
         fcache_str = str(fcache)

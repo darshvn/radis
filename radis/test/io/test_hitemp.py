@@ -256,9 +256,9 @@ def test_fetch_hitemp_partial_download_CO2(verbose=True, *args, **kwargs):
         "CO2_02_02273-02446_HITEMP2024.par",
         "CO2_02_02446-02659_HITEMP2024.par",
     ]
-    actual_files = sorted([basename(f) for f in local_files])
-    assert actual_files == sorted(
-        expected_files
+    actual_files = [basename(f) for f in local_files]
+    assert (
+        actual_files == expected_files
     ), f"Expected files {expected_files}, got {actual_files}"
 
 
