@@ -622,20 +622,13 @@ def _download_single_chunk(
         if os.path.exists(fcache_str.replace(".hdf5", ".h5")):
             update_pytables_to_vaex(fcache_str.replace(".hdf5", ".h5"))
 
-    try:
-        partial_download_co2_chunk(
-            start_wavno,
-            end_wavno,
-            session,
-            out_file,
-            verbose=verbose,
-        )
-    except Exception as e:
-        if verbose:
-            print(
-                f"Error downloading chunk {start_wavno:.0f}-{end_wavno:.0f} cm⁻¹: {e}"
-            )
-        raise
+    partial_download_co2_chunk(
+        start_wavno,
+        end_wavno,
+        session,
+        out_file,
+        verbose=verbose,
+    )
 
 
 def read_and_write_chunked_for_CO2(
