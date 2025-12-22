@@ -725,7 +725,8 @@ def read_and_write_chunked_for_CO2(
             if verbose:
                 print("Starting parallel downloads...\n")
 
-            max_threads = min(4, len(files_to_download))
+            cpu_threads = os.cpu_count() or 1
+            max_threads = min(max(cpu_threads - 1, 1), len(files_to_download), 4)
 
             with ThreadPoolExecutor(max_workers=max_threads) as executor:
                 futures = [
