@@ -51,6 +51,6 @@ jobs:
         env:
           HITRAN_EMAIL: ${{ secrets.HITRAN_EMAIL }}
           HITRAN_PASSWORD: ${{ secrets.HITRAN_PASSWORD }}
-          continue-on-error: true
         run: |
           pytest -m "needs_HITRAN_credentials and not download_large_databases" --durations=10
+        continue-on-error: true
