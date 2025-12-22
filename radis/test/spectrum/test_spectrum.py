@@ -361,7 +361,7 @@ def test_rescaling_function(verbose=True, *args, **kwargs):
 
 
 def test_resampling_function(
-    verbose=True, plot=False, close_plots=True, *args, **kwargs
+    verbose=True, plot=True, close_plots=True, *args, **kwargs
 ):
     """Test resampling functions
 
@@ -376,6 +376,7 @@ def test_resampling_function(
     if plot and close_plots:
         import matplotlib.pyplot as plt
 
+        plt.ion()
         plt.close("all")
 
     s = load_spec(getTestFile("CO_Tgas1500K_mole_fraction0.01.spec"), binary=True)
