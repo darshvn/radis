@@ -53,4 +53,4 @@ jobs:
           HITRAN_PASSWORD: ${{ secrets.HITRAN_PASSWORD }}
         run: |
           pytest -m "needs_HITRAN_credentials and not download_large_databases" --durations=10
-        continue-on-error: true
+        continue-on-error: true #see the file ".travis.yml" where these tests are actually tested.

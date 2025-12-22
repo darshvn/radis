@@ -584,11 +584,6 @@ def test_parse_hitemp_missing_labels_issue280(*args, **kwargs):
     print(df.dtypes["v3u"])  # Worked
 
 
-@pytest.mark.needs_HITRAN_credentials
-def test_pass_fail():
-    raise NotImplementedError("Trigger an error for test purposes")
-
-
 if __name__ == "__main__":
     # Removed due to issue 717 - https://github.com/radis/radis/issues/717
     # from radis.api.hitempapi import (
