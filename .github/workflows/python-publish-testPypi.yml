@@ -6,10 +6,14 @@
 # separate terms of service, privacy policy, and support
 # documentation.
 
-name: Upload Python Package
+name: Upload Python Package to test PyPI
 
+#see Just to test the publishing process to Test PyPI, on develop branch
 on:
-  workflow_dispatch:
+  push:
+    branches: [ "develop" ]
+  pull_request:
+    branches: [ "develop" ]
 
 permissions:
   contents: read
