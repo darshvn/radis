@@ -12,8 +12,6 @@ name: Upload Python Package to test PyPI
 on:
   push:
     branches: [ "master", "develop" ]
-  pull_request:
-    branches: [ "develop" ]
 
 permissions:
   contents: read
@@ -59,7 +57,7 @@ jobs:
     environment:
       name: testPypi-deploy
       # OPTIONAL: uncomment and update to include your PyPI project URL in the deployment status:
-      url: https://pypi.org/project/radis/
+      url: https://test.pypi.org/project/radis/
       #
       # ALTERNATIVE: if your GitHub Release name is the PyPI project version string
       # ALTERNATIVE: exactly, uncomment the following line instead:
@@ -77,6 +75,6 @@ jobs:
         with:
           packages-dir: dist/
           repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
+          skip-existing: true #skip the process if the version already exists on Test PyPI
           verbose: true
 
