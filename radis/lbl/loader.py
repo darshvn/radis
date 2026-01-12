@@ -118,6 +118,7 @@ KNOWN_DBFORMAT = [
     "hitemp-radisdb",
     "hdf5-radisdb",
     "geisa",
+    "exomol-radisdb",
 ]
 """list: Known formats for Line Databases:
 
@@ -175,6 +176,7 @@ drop_auto_columns_for_dbformat = {
     "hdf5-radisdb": [],
     "hitemp-radisdb": [],
     "geisa": [],
+    "exomol-radisdb": [],
 }
 """ dict: drop these columns if using ``drop_columns='auto'`` in load_databank
 Based on the value of ``dbformat=``, some of these columns won't be used.
@@ -1381,6 +1383,7 @@ class DatabankLoader(object):
             partition_function_exomol = {
                 molecule: {}
             }  # partition function tabulators for all isotopes
+            states_paths = {}  # ExoMol .states file paths for energy levels
             for iso in isotope_list:
                 df, local_path, Z_exomol = fetch_exomol(
                     molecule,
@@ -1403,6 +1406,21 @@ class DatabankLoader(object):
                     frames.append(df)
                 local_paths.append(local_path)
                 partition_function_exomol[molecule][iso] = Z_exomol
+
+                # Store .states file path for non-equilibrium calculations
+                from pathlib import Path
+
+                states_file = Path(local_path) / f"{Z_exomol.name}__{database}.states"
+                states_file_bz2 = (
+                    Path(local_path) / f"{Z_exomol.name}__{database}.states.bz2"
+                )
+                if states_file.exists():
+                    states_paths[iso] = str(states_file)
+                elif states_file_bz2.exists():
+                    # Use .bz2 file - PartFuncExoMolStates can read it directly
+                    states_paths[iso] = str(states_file_bz2)
+                elif self.verbose and load_energies:
+                    print(f"Warning: .states file not found at {states_file}")
 
             # Merge
             if frames == []:
@@ -1667,7 +1685,17 @@ class DatabankLoader(object):
         # are calculated ab initio from radis internal species database constants
         if load_energies and not self.input.isatom:
             try:
-                self._init_rovibrational_energies(levels, levelsfmt)
+                # For ExoMol, use .states file for energy levels
+                if compare_source == "exomol":
+                    if states_paths:
+                        self._init_rovibrational_energies(states_paths, "exomol")
+                    else:
+                        raise FileNotFoundError(
+                            f"Cannot load energies for ExoMol {molecule}: .states file not found. "
+                            + "Make sure the .states file is downloaded in the ExoMol database directory."
+                        )
+                else:
+                    self._init_rovibrational_energies(levels, levelsfmt)
             except KeyError as err:
                 print(err)
                 raise KeyError(
@@ -3090,6 +3118,21 @@ class DatabankLoader(object):
             )
             # note: use 'levels' (useless here) to specify calculations options
             # for the abinitio calculation ? Like Jmax, etc.
+
+        # read energy levels from ExoMol .states file
+        elif levelsfmt == "exomol":
+            from radis.levels.partfunc import PartFuncExoMolStates
+
+            self.reftracker.add(doi["ExoMol-2020"], "rovibrational energies")
+            parsum = PartFuncExoMolStates(
+                states_file=levels,
+                molecule=self.input.species,
+                isotope=isotope,
+                state=self.input.state,
+                use_cached=self.params.lvl_use_cached,
+                verbose=self.verbose,
+                mode=parsum_mode,
+            )
 
         else:
             raise ValueError(f"Unknown format for energy levels : {levelsfmt}")
