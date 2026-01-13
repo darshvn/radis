@@ -28,7 +28,7 @@ except ImportError:
 
 try:
     import vaex
-except ImportError:
+except (ImportError, AttributeError):
     vaex = NotInstalled(*not_installed_vaex_args)
 
 import re
@@ -693,7 +693,6 @@ def register_database(databank_name, dict_entries, verbose):
         parameters. Also adds ::
 
             format : "hitemp-radisdb"
-            parfuncfmt : "hapi"   # TIPS-2017 for equilibrium partition functions
 
         And if the molecule is in :py:attr:`~radis.db.MOLECULES_LIST_NONEQUILIBRIUM`::
 

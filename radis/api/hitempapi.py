@@ -1272,7 +1272,6 @@ class HITEMPDatabaseManager(DatabaseManager):
                     "info": info,
                     "path": local_files,
                     "format": "hitemp-radisdb",
-                    "parfuncfmt": "hapi",
                     "wavenumber_min": self.wmin,
                     "wavenumber_max": self.wmax,
                     "download_date": self.get_today(),

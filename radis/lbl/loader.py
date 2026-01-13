@@ -107,7 +107,7 @@ from ..misc.utils import NotInstalled, not_installed_vaex_args
 
 try:
     import vaex
-except ImportError:
+except (ImportError, AttributeError):
     vaex = NotInstalled(*not_installed_vaex_args)
 
 KNOWN_DBFORMAT = [
@@ -878,7 +878,7 @@ class DatabankLoader(object):
             format to read tabulated partition function file. If ``hapi``, then
             HAPI (HITRAN Python interface) [1]_ is used to retrieve them (valid if
             your database is HITRAN data). HAPI is embedded into RADIS. Check the
-            version. If partfuncfmt is None then ``hapi`` is used. Default ``hapi``.
+            version. If partfuncfmt is None then it is inferred from ``format`` (e.g. ``hapi`` for ``hitran``, ``exomol`` for ``exomol``). Default ``None``.
         parfunc: filename or None
             path to tabulated partition function to use.
             If `parfuncfmt` is `hapi` then `parfunc` should be the link to the
@@ -1968,7 +1968,9 @@ class DatabankLoader(object):
             if "parfunc" in entries:
                 parfunc = entries["parfunc"]
             if "parfuncfmt" in entries:
-                parfuncfmt = entries["parfuncfmt"]
+                # parfuncfmt = entries["parfuncfmt"]
+                # Legacy: ignore parfuncfmt in config file
+                pass
             if "levels" in entries:
                 levels = entries["levels"]
             if "levelsfmt" in entries:
@@ -1996,6 +1998,15 @@ class DatabankLoader(object):
             raise ValueError(
                 f"Energy level format ({levelsfmt}) not in known list: {KNOWN_LVLFORMAT}"
             )
+        # Infer parfuncfmt if irrelevant
+        if parfuncfmt is None:
+            if dbformat == "exomol":
+                parfuncfmt = "exomol"
+            elif "cdsd" in dbformat:
+                parfuncfmt = "cdsd"
+            else:
+                parfuncfmt = "hapi"
+
         if parfuncfmt not in [None] + KNOWN_PARFUNCFORMAT:
             raise ValueError(
                 f"Partition function format ({parfuncfmt}) not in known list: {KNOWN_PARFUNCFORMAT}"
@@ -2545,10 +2556,9 @@ class DatabankLoader(object):
                                 doi["CDSD-4000"], "line database"
                             )  # [CDSD-4000]_
                         if dbformat == "cdsd-hitemp":
-                            self.warn(
-                                "Missing doi for CDSD-HITEMP. Use HITEMP-2010?",
-                                "MissingReferenceWarning",
-                            )
+                            self.reftracker.add(
+                                doi["HITEMP-2010"], "line database"
+                            )  # [HITEMP-2010]_
 
                         if self.dataframe_type == "pandas":
                             engine = "pytables"

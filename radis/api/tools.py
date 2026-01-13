@@ -14,7 +14,7 @@ from ..misc.utils import NotInstalled, not_installed_vaex_args
 
 try:
     import vaex
-except ImportError:
+except (ImportError, AttributeError):
     vaex = NotInstalled(*not_installed_vaex_args)
 
 
