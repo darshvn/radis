@@ -651,6 +651,10 @@ def diffDatabankEntries(dict_entries1, dict_entries2, verbose=True):
 
     try:
         verbose_compare = "if_different" if verbose else False
+        # Filter out deprecated parfuncfmt key for backward compatibility
+        dict_entries1 = {k: v for k, v in dict_entries1.items() if k != "parfuncfmt"}
+        dict_entries2 = {k: v for k, v in dict_entries2.items() if k != "parfuncfmt"}
+
         assert len(dict_entries1) == len(dict_entries2)
         assert (
             compare_lists(
@@ -684,6 +688,9 @@ def diffDatabankEntries(dict_entries1, dict_entries2, verbose=True):
                     )
                     == 1
                 )
+            elif k == "parfuncfmt":
+                # Ignore deprecated parfuncfmt key for backward compatibility
+                pass
             else:
                 raise ValueError("Unexpected key:", k)
 

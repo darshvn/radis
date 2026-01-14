@@ -95,7 +95,7 @@ def test_broadening_vs_hapi(rtol=1e-2, verbose=True, plot=False, *args, **kwargs
         },
     )
     sf.load_databank(
-        path=join(hapi_data_path, "CO.data"), format="hitran", parfuncfmt="hapi"
+        path=join(hapi_data_path, "CO.data"), format="hitran"
     )
     #    s = pl.non_eq_spectrum(Tvib=T, Trot=T, Ttrans=T)
     s = sf.eq_spectrum(Tgas=T, name="RADIS")
