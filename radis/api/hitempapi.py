@@ -274,8 +274,15 @@ def setup_credentials():
 
     if (not email or not password) and not (is_rtd or is_travis or is_github_action):
         # In normal usage, fall back to prompt if environment variables not set
-        email = input("Enter HITRAN email: ")
-        password = _prompt_password(email)
+        import sys
+
+        if sys.stdin.isatty():
+            email = input("Enter HITRAN email: ")
+            password = _prompt_password(email)
+        else:
+            raise OSError(
+                "HITRAN_EMAIL and HITRAN_PASSWORD environment variables are not set, and the script is running in a non-interactive environment (e.g. captured stdin in pytest). Please set the environment variables or run with 'pytest -s' to allow interactive input."
+            )
 
     return email, password
 

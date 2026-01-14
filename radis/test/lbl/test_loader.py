@@ -144,9 +144,7 @@ def test_ignore_irrelevant_files(*args, **kwargs):
     # Regenerate .h5 cache file
     sf = SpectrumFactory(wavenum_min=2280, wavenum_max=2290)
     test_file = getTestFile("cdsd_hitemp_09_fragment.txt")
-    sf.load_databank(
-        path=test_file, format="cdsd-hitemp", db_use_cached="regen"
-    )
+    sf.load_databank(path=test_file, format="cdsd-hitemp", db_use_cached="regen")
     assert exists(test_file.replace(".txt", ".h5"))
     # Also note that there was no EmptyDatabaseError : file was properly loaded!
 
@@ -158,7 +156,6 @@ def test_ignore_irrelevant_files(*args, **kwargs):
         sf2.load_databank(
             path=test_file,
             format="cdsd-hitemp",
-
             db_use_cached="force",
         )
 

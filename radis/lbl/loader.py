@@ -492,7 +492,6 @@ class Parameters(ConditionDict):
         "levelsfmt",
         "lvl_use_cached",
         "optimization",
-
         "parfuncpath",
         "parsum_mode",
         "pseudo_continuum_threshold",
@@ -951,7 +950,7 @@ class DatabankLoader(object):
             path,
             dbformat,
             parfunc,
-
+            _,  # parfuncfmt
             levels,
             levelsfmt,
             db_use_cached,
@@ -974,7 +973,6 @@ class DatabankLoader(object):
             path=path,
             format=dbformat,
             parfunc=parfunc,
-
             levels=levels,
             levelsfmt=levelsfmt,
             db_use_cached=db_use_cached,
@@ -1006,7 +1004,6 @@ class DatabankLoader(object):
         source="hitran",
         database="default",
         parfunc=None,
-
         levels=None,
         levelsfmt="radis",
         load_energies=False,
@@ -1036,8 +1033,7 @@ class DatabankLoader(object):
             If fetching from ExoMol, use this parameter to choose which database to use. Keep ``'default'`` to use the recommended one.
             Default is ``'full'``.
 
-            Format to read tabulated partition function file. Options are ``'cdsd'``, ``'hapi'``, ``'exomol'``, ``'kurucz'`` or any of :data:`~radis.lbl.loader.KNOWN_PARFUNCFORMAT`.
-            Default is ``'hapi'``. This argument only affects molecules.
+
         parfunc: str or None
             Path to a tabulated partition function file to use. This argument only affects molecules.
         levels: dict or None
@@ -1639,19 +1635,13 @@ class DatabankLoader(object):
         self._remove_unecessary_columns(df, output)
 
         if self.input.isatom:
-            if parfuncfmt == "kurucz":
-                warnings.warn(
-                    DeprecationWarning(
-                        "The `parfuncfmt` attribute is no longer applicable for atoms. Use the new architecture with the `pfsource` parameter instead."
-                    )
-                )
-                if not self.input.pfsource:
-                    if self.input.potential_lowering:
-                        self.warn("Assuming `pfsource = 'kurucz'`")
-                        self.input.pfsource = "kurucz"
-                    else:
-                        self.warn("Assuming `pfsource = 'barklem'`")
-                        self.input.pfsource = "barklem"
+            if compare_source == "kurucz" and not self.input.pfsource:
+                if self.input.potential_lowering:
+                    self.warn("Assuming `pfsource = 'kurucz'`")
+                    self.input.pfsource = "kurucz"
+                else:
+                    self.warn("Assuming `pfsource = 'barklem'`")
+                    self.input.pfsource = "barklem"
             self.set_atomic_partition_functions()
         elif compare_source == "exomol":
             self._init_equilibrium_partition_functions(
@@ -1810,7 +1800,7 @@ class DatabankLoader(object):
             path,
             dbformat,
             parfunc,
-            _, # parfuncfmt (deprecated)
+            _,  # parfuncfmt (deprecated)
             levels,
             levelsfmt,
             db_use_cached,
@@ -1889,19 +1879,13 @@ class DatabankLoader(object):
         # ----------------------------------------------------
 
         if self.input.isatom:
-            if parfuncfmt == "kurucz":
-                warnings.warn(
-                    DeprecationWarning(
-                        "The `parfuncfmt` attribute is no longer applicable for atoms. Use the new architecture with the `pfsource` parameter instead."
-                    )
-                )
-                if not self.input.pfsource:
-                    if self.input.potential_lowering:
-                        self.warn("Assuming `pfsource = 'kurucz'`")
-                        self.input.pfsource = "kurucz"
-                    else:
-                        self.warn("Assuming `pfsource = 'barklem'`")
-                        self.input.pfsource = "barklem"
+            if dbformat == "kurucz" and not self.input.pfsource:
+                if self.input.potential_lowering:
+                    self.warn("Assuming `pfsource = 'kurucz'`")
+                    self.input.pfsource = "kurucz"
+                else:
+                    self.warn("Assuming `pfsource = 'barklem'`")
+                    self.input.pfsource = "barklem"
             self.set_atomic_partition_functions()
         else:
             self._init_equilibrium_partition_functions(parfunc)
@@ -1942,7 +1926,7 @@ class DatabankLoader(object):
         """
 
         dbformat = format
-        parfuncfmt = None # Initialize parfuncfmt here
+        parfuncfmt = None  # Initialize parfuncfmt here
 
         # Get database format and path
         # ... either from name (~/radis.json config file)
@@ -1993,7 +1977,9 @@ class DatabankLoader(object):
             )
         # Infer parfuncfmt if irrelevant
         if parfuncfmt is None:
-            if dbformat == "exomol-radisdb": # Use exomol-radisdb for consistency with fetch_databank
+            if (
+                dbformat == "exomol-radisdb"
+            ):  # Use exomol-radisdb for consistency with fetch_databank
                 parfuncfmt = "exomol"
             elif "cdsd" in dbformat and parfunc is not None:
                 parfuncfmt = "cdsd"
@@ -2073,7 +2059,7 @@ class DatabankLoader(object):
             path,
             dbformat,
             parfunc,
-            parfuncfmt, # Keep parfuncfmt in return for now, will be used by _init_equilibrium_partition_functions
+            parfuncfmt,  # Keep parfuncfmt in return for now, will be used by _init_equilibrium_partition_functions
             levels,
             levelsfmt,
             db_use_cached,
@@ -2244,7 +2230,6 @@ class DatabankLoader(object):
         else:
             parfuncfmt = "hapi"
 
-
         for iso in self._get_isotope_list():
             self.parsum_tab[molecule][iso] = {}
             ParsumTab = self._build_partition_function_interpolator(
@@ -2295,7 +2280,9 @@ class DatabankLoader(object):
                 f"`pfsource` {pfsource} is not available for the species {species}. Try running `set_atomic_partition_functions` again with a different `pfsource`."
             )
         else:
-            self.params.parfuncpath = self.params.levelsfmt = self.levelspath = None  # all these parameters are irrelevant for atoms
+            self.params.parfuncpath = (
+                self.params.levelsfmt
+            ) = self.levelspath = None  # all these parameters are irrelevant for atoms
 
     def _init_rovibrational_energies(self, levels, levelsfmt):
         """Initializes non equilibrium partition (which contain rovibrational
@@ -2639,7 +2626,9 @@ class DatabankLoader(object):
                             engine=engine,
                             output=output,
                         )
-                    elif dbformat in ["exomol-radisdb"]: # Changed from "exomol" to "exomol-radisdb" for consistency
+                    elif dbformat in [
+                        "exomol-radisdb"
+                    ]:  # Changed from "exomol" to "exomol-radisdb" for consistency
                         # self.reftracker.add("10.1016/j.jqsrt.2020.107228", "line database")  # [ExoMol-2020]
                         raise NotImplementedError("use fetch_databank('exomol')")
                     else:

@@ -463,7 +463,6 @@ class GEISADatabaseManager(DatabaseManager):
                     }
                 )
 
-
         try:
             super().register(dict_entries)
         except DatabaseAlreadyExists as e:
