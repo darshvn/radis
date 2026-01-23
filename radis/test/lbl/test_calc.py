@@ -364,8 +364,7 @@ def test_calc_spectrum_overpopulations(
     # Update on 30/10/2025: after updating how the convolution is performed for a constant nm slit
     # (see PR #763), the hardcoded reference values have been updated accordingly
     #
-    # Update on 23/01/2025: after updating how the convolution is performed for a constant nm slit
-    # (see PR #763), the hardcoded reference values have been updated accordingly
+    # Update on 23/01/2025: HITRAN 2024 update
 
     I_ref = np.array(
         [
