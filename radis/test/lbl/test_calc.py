@@ -269,11 +269,6 @@ def test_calc_spectrum_overpopulations(
     downloaded automatically and thus executed every time with `Travis CI <https://travis-ci.com/radis/radis>`_
 
     """
-    if plot:  # Make sure matplotlib is interactive so that test are not stuck in pytest
-        import matplotlib.pyplot as plt
-
-        plt.ion()
-
     s = calc_spectrum(
         wavelength_min=4165,
         wavelength_max=4200,
@@ -304,7 +299,10 @@ def test_calc_spectrum_overpopulations(
     )
     s.apply_slit((2, 2.5), "nm", shape="trapezoidal")
 
-    if plot:
+    if plot:  # Make sure matplotlib is interactive so that test are not stuck in pytest
+        import matplotlib.pyplot as plt
+
+        plt.ion()
         s.plot(wunit="nm")
 
     w, I = s.get("radiance", wunit="nm")
@@ -365,33 +363,47 @@ def test_calc_spectrum_overpopulations(
     #
     # Update on 30/10/2025: after updating how the convolution is performed for a constant nm slit
     # (see PR #763), the hardcoded reference values have been updated accordingly
+    #
+    # Update on 23/01/2025: after updating how the convolution is performed for a constant nm slit
+    # (see PR #763), the hardcoded reference values have been updated accordingly
 
     I_ref = np.array(
         [
-            0.67486785,
-            0.81622363,
-            0.79304703,
-            0.55360112,
-            0.58994659,
-            0.61157865,
-            0.52107744,
-            0.51866847,
-            0.47210067,
-            0.51107946,
-            0.45979748,
-            0.39722396,
-            0.3493322,
-            0.32207141,
-            0.32954643,
-            0.13293136,
-            0.00640475,
-            0.00365381,
+            0.67481252,
+            0.8162244,
+            0.79265991,
+            0.55284581,
+            0.58977946,
+            0.61140796,
+            0.52058259,
+            0.51859913,
+            0.47202518,
+            0.51092902,
+            0.45967962,
+            0.3974771,
+            0.34959161,
+            0.32168965,
+            0.3278813,
+            0.13260797,
+            0.00672379,
+            0.00378035,
         ]
     )
+
     if plot:
+        plt.figure()
         plt.plot(w_ref, I_ref, "or", label="ref")
         plt.legend()
         s.plot_populations()
+
+        plt.figure()
+        plt.plot(I[71:-71][::100][1:])
+        plt.plot(I_ref)
+        plt.show()
+
+        plt.figure()
+        plt.title("Difference between Iref and calculated spectrum")
+        plt.plot(I_ref - I[71:-71][::100][1:])
         plt.show()
 
     # [71:-71] because of the shift introduced in 0.9.30 where convolved
@@ -1001,5 +1013,6 @@ def _run_testcases(plot=True, verbose=True, warnings=True, *args, **kwargs):
 
 # --------------------------
 if __name__ == "__main__":
-    test_non_air_diluent_calc()
+    # test_non_air_diluent_calc()
+    test_calc_spectrum_overpopulations()
     # printm("Testing calc.py: ", _run_testcases(verbose=True))
