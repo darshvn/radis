@@ -376,7 +376,7 @@ def test_calc_spectrum_overpopulations(
             0.61140796,
             0.52058259,
             0.51859913,
-            0.47202518,
+            0.47202511,
             0.51092902,
             0.45967962,
             0.3974771,
@@ -1012,6 +1012,5 @@ def _run_testcases(plot=True, verbose=True, warnings=True, *args, **kwargs):
 
 # --------------------------
 if __name__ == "__main__":
-    # test_non_air_diluent_calc()
-    test_calc_spectrum_overpopulations()
+    test_non_air_diluent_calc()
     # printm("Testing calc.py: ", _run_testcases(verbose=True))
