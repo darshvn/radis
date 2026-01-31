@@ -269,11 +269,6 @@ def test_calc_spectrum_overpopulations(
     downloaded automatically and thus executed every time with `Travis CI <https://travis-ci.com/radis/radis>`_
 
     """
-    if plot:  # Make sure matplotlib is interactive so that test are not stuck in pytest
-        import matplotlib.pyplot as plt
-
-        plt.ion()
-
     s = calc_spectrum(
         wavelength_min=4165,
         wavelength_max=4200,
@@ -304,7 +299,10 @@ def test_calc_spectrum_overpopulations(
     )
     s.apply_slit((2, 2.5), "nm", shape="trapezoidal")
 
-    if plot:
+    if plot:  # Make sure matplotlib is interactive so that test are not stuck in pytest
+        import matplotlib.pyplot as plt
+
+        plt.ion()
         s.plot(wunit="nm")
 
     w, I = s.get("radiance", wunit="nm")
@@ -365,6 +363,8 @@ def test_calc_spectrum_overpopulations(
     #
     # Update on 30/10/2025: after updating how the convolution is performed for a constant nm slit
     # (see PR #763), the hardcoded reference values have been updated accordingly
+    #
+    # Update on 23/01/2025: HITRAN 2024 update
 
     I_ref = np.array(
         [
@@ -388,10 +388,21 @@ def test_calc_spectrum_overpopulations(
             0.00378035,
         ]
     )
+
     if plot:
+        plt.figure()
         plt.plot(w_ref, I_ref, "or", label="ref")
         plt.legend()
         s.plot_populations()
+
+        plt.figure()
+        plt.plot(I[71:-71][::100][1:])
+        plt.plot(I_ref)
+        plt.show()
+
+        plt.figure()
+        plt.title("Difference between Iref and calculated spectrum")
+        plt.plot(I_ref - I[71:-71][::100][1:])
         plt.show()
 
     # [71:-71] because of the shift introduced in 0.9.30 where convolved
