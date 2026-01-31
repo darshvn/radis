@@ -28,7 +28,7 @@ except ImportError:
 
 try:
     import vaex
-except (ImportError, AttributeError):
+except ImportError:
     vaex = NotInstalled(*not_installed_vaex_args)
 
 import re

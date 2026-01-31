@@ -255,16 +255,14 @@ def get_user_config_configformat(config_path=CONFIG_PATH_OLD):
     """
 
     config = configparser.ConfigParser()
-    configpath = config_path
-
     # Test ~/.radis exists
-    if not exists(configpath):
+    if not exists(config_path):
 
         raise FileNotFoundError(
-            f"Create a `.radis` file in {dirname(configpath)} to store links to "
+            f"Create a `.radis` file in {dirname(config_path)} to store links to "
             + f"your local databanks. Format must be:\n {DBFORMAT}"
         )
-    config.read(configpath)
+    config.read(config_path)
 
     return config
 

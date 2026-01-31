@@ -950,7 +950,6 @@ class DatabankLoader(object):
             path,
             dbformat,
             parfunc,
-            _,  # parfuncfmt
             levels,
             levelsfmt,
             db_use_cached,
@@ -1135,12 +1134,6 @@ class DatabankLoader(object):
 
         local_databases = config["DEFAULT_DOWNLOAD_PATH"]
 
-        # if [parfuncfmt, compare_source].count("exomol") == 1:
-        #     self.warn(
-        #         f"Using lines from {source} but partition functions from {parfuncfmt}"
-        #         + "for consistency we recommend using lines and partition functions from the same database",
-        #         "AccuracyWarning",
-        #     )
         if memory_mapping_engine == "default":
             memory_mapping_engine = self.misc.memory_mapping_engine
 
@@ -1716,7 +1709,7 @@ class DatabankLoader(object):
 
         parfunc: filename or None
             path to tabulated partition function to use.
-            path to tabulated partition function to use.
+
             If not given, then the hapi.py embedded in RADIS is used (check version). This argument only affects molecules.
         levels: dict of str or None
             path to energy levels (needed for non-eq calculations). Format:
@@ -1800,7 +1793,6 @@ class DatabankLoader(object):
             path,
             dbformat,
             parfunc,
-            _,  # parfuncfmt (deprecated)
             levels,
             levelsfmt,
             db_use_cached,
@@ -1926,7 +1918,7 @@ class DatabankLoader(object):
         """
 
         dbformat = format
-        parfuncfmt = None  # Initialize parfuncfmt here
+        # parfuncfmt = None # Removed
 
         # Get database format and path
         # ... either from name (~/radis.json config file)
@@ -1976,15 +1968,6 @@ class DatabankLoader(object):
                 f"Energy level format ({levelsfmt}) not in known list: {KNOWN_LVLFORMAT}"
             )
         # Infer parfuncfmt if irrelevant
-        if parfuncfmt is None:
-            if (
-                dbformat == "exomol-radisdb"
-            ):  # Use exomol-radisdb for consistency with fetch_databank
-                parfuncfmt = "exomol"
-            elif "cdsd" in dbformat and parfunc is not None:
-                parfuncfmt = "cdsd"
-            else:
-                parfuncfmt = "hapi"
 
         # if parfuncfmt not in [None] + KNOWN_PARFUNCFORMAT: # Removed
         #     raise ValueError(
@@ -2059,7 +2042,6 @@ class DatabankLoader(object):
             path,
             dbformat,
             parfunc,
-            parfuncfmt,  # Keep parfuncfmt in return for now, will be used by _init_equilibrium_partition_functions
             levels,
             levelsfmt,
             db_use_cached,
@@ -2546,9 +2528,10 @@ class DatabankLoader(object):
                                 doi["CDSD-4000"], "line database"
                             )  # [CDSD-4000]_
                         if dbformat == "cdsd-hitemp":
-                            self.reftracker.add(
-                                doi["HITEMP-2010"], "line database"
-                            )  # [HITEMP-2010]_
+                            self.warn(
+                                "Missing doi for CDSD-HITEMP. Use HITEMP-2010?",
+                                "MissingReferenceWarning",
+                            )
 
                         if self.dataframe_type == "pandas":
                             engine = "pytables"
