@@ -254,6 +254,7 @@ def setup_credentials():
     is_rtd = os.environ.get("READTHEDOCS", "").lower() == "true"
     is_travis = os.environ.get("TRAVIS", "").lower() == "true"
     is_github_action = os.environ.get("GITHUB_ACTIONS", "").lower() == "true"
+    is_pytest = os.environ.get("PYTEST_CURRENT_TEST")
 
     # compatibly with old versions
     email = os.environ.get("HITRAN_EMAIL")
@@ -276,13 +277,14 @@ def setup_credentials():
         # In normal usage, fall back to prompt if environment variables not set
         import sys
 
+        if is_pytest and (not email or not password):
+            raise OSError(
+                "HITRAN_EMAIL and/or HITRAN_PASSWORD environment variables are not set, and the script is running in a non-interactive environment (e.g. captured stdin in pytest). Please set the environment variables or run with 'pytest -s' to allow interactive input."
+            )
+
         if sys.stdin.isatty():
             email = input("Enter HITRAN email: ")
             password = _prompt_password(email)
-        else:
-            raise OSError(
-                "HITRAN_EMAIL and HITRAN_PASSWORD environment variables are not set, and the script is running in a non-interactive environment (e.g. captured stdin in pytest). Please set the environment variables or run with 'pytest -s' to allow interactive input."
-            )
 
     return email, password
 

@@ -107,7 +107,7 @@ from ..misc.utils import NotInstalled, not_installed_vaex_args
 
 try:
     import vaex
-except (ImportError, AttributeError):
+except ImportError:
     vaex = NotInstalled(*not_installed_vaex_args)
 
 KNOWN_DBFORMAT = [
@@ -2181,15 +2181,9 @@ class DatabankLoader(object):
 
         Parameters
         ----------
-        parfuncfmt: 'cdsd', 'hapi' (see :data:`~radis.lbl.loader.KNOWN_PARFUNCFORMAT`)
-            format to read tabulated partition function file. If `hapi`, then
-            HAPI (HITRAN Python interface) [1]_ is used to retrieve them (valid if
-            your database is HITRAN data). HAPI is embedded into RADIS. Check the
-            version.
         parfunc: filename or None
             path to tabulated partition function to use.
-            If ``parfuncfmt`` is ``hapi`` then ``parfunc`` should be the link to the
-            hapi.py file. If not given, then the hapi.py embedded in RADIS is used (check version)
+            If not given, then the hapi.py embedded in RADIS is used (check version)
 
         Other Parameters
         ----------------
@@ -2203,20 +2197,11 @@ class DatabankLoader(object):
         state = self.input.state
         self.parsum_tab[molecule] = {}
 
-        # Infer parfuncfmt based on dbformat if not explicitly set
-        parfuncfmt = None
-        if self.params.dbformat == "exomol-radisdb":
-            parfuncfmt = "exomol"
-        elif "cdsd" in self.params.dbformat and parfunc is not None:
-            parfuncfmt = "cdsd"
-        else:
-            parfuncfmt = "hapi"
-
+        # Infer logic based on dbformat if not explicitly set
         for iso in self._get_isotope_list():
             self.parsum_tab[molecule][iso] = {}
             ParsumTab = self._build_partition_function_interpolator(
                 parfunc,
-                parfuncfmt,
                 self.input.species,
                 isotope=iso,
                 predefined_partition_functions=predefined_partition_functions,
@@ -2956,7 +2941,7 @@ class DatabankLoader(object):
                 return None
 
     def _build_partition_function_interpolator(
-        self, parfunc, parfuncfmt, molecule, isotope, predefined_partition_functions={}
+        self, parfunc, molecule, isotope, predefined_partition_functions={}
     ):
         """Returns an universal partition function object ``parsum`` with the
         following methods defined::
@@ -2973,7 +2958,20 @@ class DatabankLoader(object):
 
         isotope = int(isotope)
 
-        if parfuncfmt in ["hapi", "tips"] or parfuncfmt is None:
+        if self.params.dbformat == "exomol-radisdb":
+            self.reftracker.add(doi["ExoMol-2020"], "partition function")
+            # Just read dictionary of predefined partition function
+            assert len(predefined_partition_functions) > 0
+            parsum = predefined_partition_functions[molecule][isotope]
+
+        elif "cdsd" in self.params.dbformat and parfunc is not None:
+            # Use tabulated CDSD partition functions
+            self.reftracker.add(doi["CDSD-4000"], "partition function")
+            assert len(predefined_partition_functions) == 0
+            assert molecule == "CO2"
+            parsum = PartFuncCO2_CDSDtab(isotope, parfunc)
+
+        else:  # "hapi", "tips" or parfuncfmt is None
             assert len(predefined_partition_functions) == 0
             self.reftracker.add(doi["TIPS-2020"], "partition function")
             self.reftracker.add(doi["HAPI"], "partition function")
@@ -2985,20 +2983,6 @@ class DatabankLoader(object):
             )
             self.parsum_tab[molecule][isotope]["Tmin"] = parsum.Tmin
             self.parsum_tab[molecule][isotope]["Tmax"] = parsum.Tmax
-
-        elif parfuncfmt == "cdsd":  # Use tabulated CDSD partition functions
-            self.reftracker.add(doi["CDSD-4000"], "partition function")
-            assert len(predefined_partition_functions) == 0
-            assert molecule == "CO2"
-            parsum = PartFuncCO2_CDSDtab(isotope, parfunc)
-        elif parfuncfmt == "exomol":
-            self.reftracker.add(doi["ExoMol-2020"], "partition function")
-            # Just read dictionary of predefined partition function
-            assert len(predefined_partition_functions) > 0
-            parsum = predefined_partition_functions[molecule][isotope]
-        else:
-            raise ValueError(f"Unknown format for partition function: {parfuncfmt}")
-            # other formats ?
 
         return parsum
 

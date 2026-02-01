@@ -96,7 +96,7 @@ from radis.spectrum.utils import print_conditions
 
 try:
     import vaex
-except (ImportError, AttributeError):
+except ImportError:
     vaex = NotInstalled(*not_installed_vaex_args)
 
 

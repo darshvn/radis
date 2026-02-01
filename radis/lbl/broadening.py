@@ -92,7 +92,7 @@ from ..phys.constants import Na, c_CGS, eV2wn, k_b_CGS
 
 try:
     import vaex
-except (ImportError, AttributeError):
+except ImportError:
     vaex = NotInstalled(*not_installed_vaex_args)
 
 

@@ -11,8 +11,6 @@
       "format": "hitran",             # 'hitran' (HITRAN/HITEMP), 'cdsd-hitemp', 'cdsd-4000'
                                     # databank text file format. More info in
                                     # SpectrumFactory.load_databank function.
-
-
     # Optional
     # ----------
     "parfunc": "",                  # path to tabulated partition function to use.
