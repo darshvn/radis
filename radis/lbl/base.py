@@ -63,6 +63,7 @@ Most methods are written in inherited class with the following inheritance schem
 
 
 """
+
 # TODO: move all CDSD dependant functions _add_Evib123Erot to a specific file for CO2.
 
 import numpy as np
@@ -3039,46 +3040,6 @@ class BaseFactory(DatabankLoader):
         self.profiler.stop("part_function", "partition functions")
         return Q, Qvib, Qrotu, Qrotl
 
-    def _identify_electronic_state_by_energy(self, energy_cm1, molecule_data):
-        """Identify electronic state based on energy ranges
-
-        Parameters
-        ----------
-        energy_cm1 : float or array
-            Energy in cm-1
-        molecule_data : dict
-            Molecule database entry containing 'electronic_states' key
-
-        Returns
-        -------
-        state_name : str or array
-            Electronic state name (e.g., 'X2PI', 'A2SIG+')
-        """
-        import numpy as np
-
-        if "electronic_states" not in molecule_data:
-            return None
-
-        # Handle scalar or array input
-        is_scalar = np.isscalar(energy_cm1)
-        energies = np.atleast_1d(energy_cm1)
-
-        state_names = np.empty(len(energies), dtype=object)
-
-        for i, E in enumerate(energies):
-            state_found = False
-            for state_name, state_info in molecule_data["electronic_states"].items():
-                E_min, E_max = state_info["energy_range_cm-1"]
-                if E_min <= E < E_max:
-                    state_names[i] = state_name
-                    state_found = True
-                    break
-            if not state_found:
-                # Default to highest energy state if above all ranges
-                state_names[i] = list(molecule_data["electronic_states"].keys())[-1]
-
-        return state_names[0] if is_scalar else state_names
-
     def _calc_electronic_partition_function(self, Telec, molecule_data):
         """Calculate electronic partition function
 
@@ -3108,6 +3069,77 @@ class BaseFactory(DatabankLoader):
             Qelec += ge * exp(-Te * hc_k / Telec)
 
         return Qelec
+
+    def _compute_electronic_populations(self, df, Telec, Trot):
+        """Compute electronic Boltzmann factors and partition function.
+
+        Parameters
+        ----------
+        df : DataFrame
+        Telec : float or None
+        Trot : float
+
+        Returns
+        -------
+        boltz_elec_u, boltz_elec_l : Series or float
+            exp(-Te_u * hc_k / Telec) per transition, or 1.0
+        Qelec : float
+            Electronic partition function, or 1.0
+        Telec : float or None
+            Resolved electronic temperature (may be defaulted to Trot)
+        """
+        from numpy import exp
+
+        from radis.phys.constants import hc_k
+
+        has_electronic_states = False
+        if "exomol_electronic_states" in df.attrs:
+            for state_info in df.attrs["exomol_electronic_states"].values():
+                if state_info.get("Te", 0) > 0:
+                    has_electronic_states = True
+                    break
+
+        if Telec is None and has_electronic_states:
+            Telec = Trot
+            if self.verbose >= 1:
+                import warnings
+
+                warnings.warn(
+                    f"Molecule has multiple electronic states but Telec not specified. "
+                    f"Defaulting to Telec=Trot={Trot}K (thermal equilibrium). "
+                    f"For non-equilibrium plasmas, specify Telec explicitly.",
+                    UserWarning,
+                )
+
+        if Telec is not None:
+            Te_u, Te_l = self._get_electronic_energy_from_total(df)
+
+            if "exomol_electronic_states" in df.attrs:
+                exomol_states = df.attrs["exomol_electronic_states"]
+                molecule_data_temp = {"electronic_states": {}}
+                for state_name, state_info in exomol_states.items():
+                    molecule_data_temp["electronic_states"][state_name] = {
+                        "Te_cm-1": state_info["Te"],
+                        "g_e": state_info.get("g_e", 1.0),
+                    }
+                Qelec = self._calc_electronic_partition_function(
+                    Telec, molecule_data_temp
+                )
+            else:
+                Qelec = 1.0
+
+            boltz_elec_u = exp(-Te_u * hc_k / Telec)
+            boltz_elec_l = exp(-Te_l * hc_k / Telec)
+
+            if self.verbose >= 2:
+                print(f"  Electronic temperature Telec={Telec}K applied")
+                print(f"  Electronic partition function Qelec={Qelec:.4f}")
+        else:
+            boltz_elec_u = 1.0
+            boltz_elec_l = 1.0
+            Qelec = 1.0
+
+        return boltz_elec_u, boltz_elec_l, Qelec, Telec
 
     def _calculate_exomol_energies(self, df, df_states):
         """Calculate proper Evib, Erot, Te from ExoMol states with quantum numbers"""
@@ -3303,44 +3335,6 @@ class BaseFactory(DatabankLoader):
                     Te_l = df.El - df.Evibl - df.Erotl
                     return Te_u, Te_l
 
-            # Fallback: Use energy-based identification from molecules_data.json
-            import json
-            import os
-
-            molecule = self.input.species
-            db_path = os.path.join(
-                os.path.dirname(__file__), "..", "db", molecule, "molecules_data.json"
-            )
-
-            if os.path.exists(db_path):
-                with open(db_path, "r") as f:
-                    molecule_db = json.load(f)
-                molecule_data = molecule_db.get(molecule, {})
-
-                if "electronic_states" in molecule_data:
-                    # Identify states by energy ranges and find minimum energy in each range
-                    Te_u = df.Eu * 0.0  # Initialize
-                    Te_l = df.El * 0.0
-
-                    for state_name, state_info in molecule_data[
-                        "electronic_states"
-                    ].items():
-                        e_range = state_info.get("energy_range_cm-1")
-
-                        if e_range is not None:
-                            # Find which levels belong to this electronic state
-                            mask_u = (df.Eu >= e_range[0]) & (df.Eu < e_range[1])
-                            mask_l = (df.El >= e_range[0]) & (df.El < e_range[1])
-
-                            # Use the MINIMUM energy in this range as Te
-                            # This is the v=0, J=0 (or lowest available) state
-                            if mask_u.any():
-                                Te_u[mask_u] = df.Eu[mask_u].min()
-                            if mask_l.any():
-                                Te_l[mask_l] = df.El[mask_l].min()
-
-                    return Te_u, Te_l
-
         # Standard case: subtract rovibrational energies
         if "Erovibu" in df and "Erovibl" in df:
             Te_u = df.Eu - df.Erovibu
@@ -3354,172 +3348,6 @@ class BaseFactory(DatabankLoader):
             Te_l = df.El
 
         return Te_u, Te_l
-
-    def _apply_electronic_populations(self, df, Telec):
-        """Apply electronic temperature to molecular populations
-
-        Modifies df["nu"] and df["nl"] in place to include electronic populations
-
-        Parameters
-        ----------
-        df : DataFrame
-            Must contain columns: nu, nl, Eu, El
-        Telec : float
-            Electronic temperature in K
-        """
-        import json
-        import os
-
-        from numpy import exp
-
-        from radis.phys.constants import hc_k
-
-        # Load molecule database to get electronic states
-        molecule = self.input.species
-        db_path = os.path.join(
-            os.path.dirname(__file__), "..", "db", molecule, "molecules_data.json"
-        )
-
-        if not os.path.exists(db_path):
-            # No electronic state info for this molecule
-            if self.verbose >= 2:
-                print(
-                    f"No electronic state database found for {molecule} at {db_path}. Telec not applied."
-                )
-            return
-
-        with open(db_path, "r") as f:
-            molecule_db = json.load(f)
-
-        molecule_data = molecule_db.get(molecule, {})
-
-        if "electronic_states" not in molecule_data:
-            # No electronic states defined
-            if self.verbose >= 2:
-                print(
-                    f"No electronic states defined for {molecule}. Telec not applied."
-                )
-            return
-
-        if self.verbose >= 2:
-            print(
-                f"Applying electronic temperature Telec={Telec}K to {molecule} populations"
-            )
-
-        # Get electronic energies for upper and lower states
-        Te_u, Te_l = self._get_electronic_energy_from_total(df)
-
-        # Get Trot from params (needed for ExoMol correction)
-        Trot = self.input.Trot if hasattr(self.input, "Trot") else self.input.Tvib
-
-        # Check if we have ExoMol electronic states from states file
-        if "exomol_electronic_states" in df.attrs:
-            # Use ExoMol states data (more accurate)
-            exomol_states = df.attrs["exomol_electronic_states"]
-
-            # Create temporary molecule_data dict for partition function calculation
-            molecule_data_exomol = {"electronic_states": {}}
-            for state_name, state_info in exomol_states.items():
-                molecule_data_exomol["electronic_states"][state_name] = {
-                    "Te_cm-1": state_info["Te"],
-                    "g_e": 1.0,  # ExoMol lists e/f states separately, g already includes (2S+1)*(2J+1)
-                }
-
-            Qelec_at_Telec = self._calc_electronic_partition_function(
-                Telec, molecule_data_exomol
-            )
-            Qelec_at_Trot = self._calc_electronic_partition_function(
-                Trot, molecule_data_exomol
-            )
-
-            if self.verbose >= 2:
-                print(
-                    f"  Electronic partition function Qelec(Telec={Telec}K) = {Qelec_at_Telec:.4f}"
-                )
-                print(
-                    f"  Electronic partition function Qelec(Trot={Trot}K) = {Qelec_at_Trot:.4f}"
-                )
-                for state_name, state_info in exomol_states.items():
-                    Te = state_info["Te"]
-                    pop_factor = exp(-Te * hc_k / Telec) / Qelec_at_Telec
-                    print(
-                        f"    {state_name} (Te={Te:.1f} cm-1): population factor = {pop_factor:.4f}"
-                    )
-        else:
-            # Use molecules_data.json values (fallback)
-            Qelec_at_Telec = self._calc_electronic_partition_function(
-                Telec, molecule_data
-            )
-            Qelec_at_Trot = self._calc_electronic_partition_function(
-                Trot, molecule_data
-            )
-
-            if self.verbose >= 2:
-                print(
-                    f"  Electronic partition function Qelec(Telec={Telec}K) = {Qelec_at_Telec:.4f}"
-                )
-                print(
-                    f"  Electronic partition function Qelec(Trot={Trot}K) = {Qelec_at_Trot:.4f}"
-                )
-                # Show which electronic states are populated
-                for state_name, state_info in molecule_data[
-                    "electronic_states"
-                ].items():
-                    Te = state_info["Te_cm-1"]
-                    ge = state_info["g_e"]
-                    pop_factor = ge * exp(-Te * hc_k / Telec) / Qelec_at_Telec
-                    print(
-                        f"    {state_name} (Te={Te:.1f} cm-1): population factor = {pop_factor:.4f}"
-                    )
-
-        # Calculate electronic populations
-        #
-        # For ExoMol format, we need to RECALCULATE populations from scratch using
-        # separated energies (Erot, Evib, Te) instead of using a correction factor.
-        #
-        # The current populations (nu, nl) were calculated using E_total = Erot + Evib + Te
-        # at Trot. We need to replace them with populations calculated using separate
-        # temperatures for each degree of freedom.
-        #
-        # Target formula:
-        #   n = g × exp(-E_rot/kT_rot) × exp(-E_vib/kT_vib) × exp(-Te/kT_elec) / (Q_rovib × Q_elec)
-
-        if self.params.dbformat == "exomol-radisdb":
-            # For ExoMol: We have separated energies Erot, Evib, Te
-            # Recalculate populations from scratch using these separated components
-
-            # Get the rovibrational partition function used for current populations
-            # (This was calculated at Trot, Tvib during calc_populations_noneq)
-            # We'll reuse the rovibrational part and only modify the electronic part
-
-            # Electronic Boltzmann factors for each state
-            # n_elec ∝ exp(-Te/kTelec) / Q_elec(Telec)
-            boltz_elec_u = exp(-Te_u * hc_k / Telec) / Qelec_at_Telec
-            boltz_elec_l = exp(-Te_l * hc_k / Telec) / Qelec_at_Telec
-
-            # The current populations have exp(-E_total/kTrot) / Q_rovib
-            # We want exp(-Erovib/kTrot) × exp(-Te/kTelec) / (Q_rovib × Q_elec)
-            #
-            # To convert: multiply by exp(Te/kTrot) to remove the electronic part at Trot,
-            # then multiply by exp(-Te/kTelec) / Q_elec to add electronic part at Telec
-            #
-            # Combined: multiply by exp(Te/kTrot) × exp(-Te/kTelec) / Q_elec
-            #         = boltz_elec × exp(Te/kTrot)
-
-            df["nu"] = df.nu * boltz_elec_u * exp(Te_u * hc_k / Trot)
-            df["nl"] = df.nl * boltz_elec_l * exp(Te_l * hc_k / Trot)
-
-        else:
-            # For other formats: populations don't include electronic energy yet
-            # Simply apply the electronic Boltzmann factor
-            boltz_elec_u = exp(-Te_u * hc_k / Telec) / Qelec_at_Telec
-            boltz_elec_l = exp(-Te_l * hc_k / Telec) / Qelec_at_Telec
-
-            df["nu"] = df.nu * boltz_elec_u
-            df["nl"] = df.nl * boltz_elec_l
-
-        if self.verbose >= 2:
-            print(f"  Applied electronic populations to {len(df)} transitions")
 
     # %%
     def calc_populations_noneq(
@@ -3609,10 +3437,6 @@ class BaseFactory(DatabankLoader):
         if overpopulation is None:
             overpopulation = {}
 
-        # Import needed for electronic populations
-        import json
-        import os
-
         df = self.df1
 
         self.profiler.start("calc_noneq_population", 2)
@@ -3667,87 +3491,14 @@ class BaseFactory(DatabankLoader):
                     )
 
                 # ... Electronic distributions
-                # Check if molecule has electronic states with Te > 0
-                has_electronic_states = False
-                if "exomol_electronic_states" in df.attrs:
-                    exomol_states = df.attrs["exomol_electronic_states"]
-                    # Check if any state has Te > 0
-                    for state_info in exomol_states.values():
-                        if state_info.get("Te", 0) > 0:
-                            has_electronic_states = True
-                            break
-
-                # Physics-correct default: if molecule has electronic states but
-                # Telec not specified, use Telec = Trot (thermal equilibrium)
-                # This is consistent with how CO/CO2 work (all Te=0, so Telec doesn't matter)
-                if Telec is None and has_electronic_states:
-                    Telec = Trot
-                    if self.verbose >= 1:
-                        import warnings
-
-                        warnings.warn(
-                            f"Molecule has multiple electronic states but Telec not specified. "
-                            f"Defaulting to Telec=Trot={Trot}K (thermal equilibrium). "
-                            f"For non-equilibrium plasmas, specify Telec explicitly.",
-                            UserWarning,
-                        )
-
-                if Telec is not None:
-                    # Get electronic energies for each state
-                    Te_u, Te_l = self._get_electronic_energy_from_total(df)
-
-                    # Get electronic partition function
-                    molecule = self.input.species
-                    db_path = os.path.join(
-                        os.path.dirname(__file__),
-                        "..",
-                        "db",
-                        molecule,
-                        "molecules_data.json",
-                    )
-
-                    if os.path.exists(db_path):
-                        with open(db_path, "r") as f:
-                            molecule_db = json.load(f)
-                        molecule_data = molecule_db.get(molecule, {})
-
-                        # Check for ExoMol electronic states first
-                        if "exomol_electronic_states" in df.attrs:
-                            exomol_states = df.attrs["exomol_electronic_states"]
-                            molecule_data_temp = {"electronic_states": {}}
-                            for state_name, state_info in exomol_states.items():
-                                molecule_data_temp["electronic_states"][state_name] = {
-                                    "Te_cm-1": state_info["Te"],
-                                    "g_e": state_info.get(
-                                        "g_e", 1.0
-                                    ),  # Use g_e from molecules_data.json
-                                }
-                            Qelec = self._calc_electronic_partition_function(
-                                Telec, molecule_data_temp
-                            )
-                        elif "electronic_states" in molecule_data:
-                            Qelec = self._calc_electronic_partition_function(
-                                Telec, molecule_data
-                            )
-                        else:
-                            Qelec = 1.0  # No electronic states defined
-                    else:
-                        Qelec = 1.0  # No database
-
-                    # Calculate electronic populations (same approach as vib/rot)
-                    # g_e = 1.0 for ExoMol because e/f parity states are listed separately
-                    # and g in states file already includes (2S+1)*(2J+1)
-                    df["nu_elec_x_Qelec"] = 1.0 * exp(-Te_u * hc_k / Telec)
-                    df["nl_elec_x_Qelec"] = 1.0 * exp(-Te_l * hc_k / Telec)
-
-                    if self.verbose >= 2:
-                        print(f"  Electronic temperature Telec={Telec}K applied")
-                        print(f"  Electronic partition function Qelec={Qelec:.4f}")
-                else:
-                    # No electronic states (like CO, CO2) - factor = 1.0
-                    df["nu_elec_x_Qelec"] = 1.0
-                    df["nl_elec_x_Qelec"] = 1.0
-                    Qelec = 1.0
+                (
+                    boltz_elec_u,
+                    boltz_elec_l,
+                    Qelec,
+                    Telec,
+                ) = self._compute_electronic_populations(df, Telec, Trot)
+                df["nu_elec_x_Qelec"] = boltz_elec_u
+                df["nl_elec_x_Qelec"] = boltz_elec_l
 
                 # ... Partition functions
                 # Pass Telec to Qneq so it includes exp(-Te/Telec) in the sum
@@ -3834,82 +3585,16 @@ class BaseFactory(DatabankLoader):
                     )
 
                 # ... Electronic distributions
-                # Check if molecule has electronic states with Te > 0
-                has_electronic_states = False
-                if "exomol_electronic_states" in df.attrs:
-                    exomol_states = df.attrs["exomol_electronic_states"]
-                    for state_info in exomol_states.values():
-                        if state_info.get("Te", 0) > 0:
-                            has_electronic_states = True
-                            break
-
-                # Physics-correct default: if molecule has electronic states but
-                # Telec not specified, use Telec = Trot (thermal equilibrium)
-                if Telec is None and has_electronic_states:
-                    Telec = Trot
-                    if self.verbose >= 1:
-                        import warnings
-
-                        warnings.warn(
-                            f"Molecule has multiple electronic states but Telec not specified. "
-                            f"Defaulting to Telec=Trot={Trot}K (thermal equilibrium). "
-                            f"For non-equilibrium plasmas, specify Telec explicitly.",
-                            UserWarning,
-                        )
-
-                if Telec is not None:
-                    # Get electronic energies for each state
-                    Te_u, Te_l = self._get_electronic_energy_from_total(df)
-
-                    # Get electronic partition function
-                    molecule = self.input.species
-                    db_path = os.path.join(
-                        os.path.dirname(__file__),
-                        "..",
-                        "db",
-                        molecule,
-                        "molecules_data.json",
-                    )
-
-                    if os.path.exists(db_path):
-                        with open(db_path, "r") as f:
-                            molecule_db = json.load(f)
-                        molecule_data = molecule_db.get(molecule, {})
-
-                        # Check for ExoMol electronic states first
-                        if "exomol_electronic_states" in df.attrs:
-                            exomol_states = df.attrs["exomol_electronic_states"]
-                            molecule_data_temp = {"electronic_states": {}}
-                            for state_name, state_info in exomol_states.items():
-                                molecule_data_temp["electronic_states"][state_name] = {
-                                    "Te_cm-1": state_info["Te"],
-                                    "g_e": state_info.get(
-                                        "g_e", 1.0
-                                    ),  # Use g_e from molecules_data.json
-                                }
-                            Qelec = self._calc_electronic_partition_function(
-                                Telec, molecule_data_temp
-                            )
-                        elif "electronic_states" in molecule_data:
-                            Qelec = self._calc_electronic_partition_function(
-                                Telec, molecule_data
-                            )
-                        else:
-                            Qelec = 1.0  # No electronic states defined
-                    else:
-                        Qelec = 1.0  # No database
-
-                    # Calculate electronic populations (same approach as vib/rot)
-                    # g_e = 1.0 for ExoMol because e/f parity states are listed separately
-                    # and g in states file already includes (2S+1)*(2J+1)
-                    df["nu_elec"] = 1.0 / Qelec * exp(-Te_u * hc_k / Telec)
-                    df["nl_elec"] = 1.0 / Qelec * exp(-Te_l * hc_k / Telec)
-
-                    if self.verbose >= 2:
-                        print(f"  Electronic temperature Telec={Telec}K applied")
-                        print(f"  Electronic partition function Qelec={Qelec:.4f}")
+                (
+                    boltz_elec_u,
+                    boltz_elec_l,
+                    Qelec,
+                    Telec,
+                ) = self._compute_electronic_populations(df, Telec, Trot)
+                if Qelec != 1.0:
+                    df["nu_elec"] = boltz_elec_u / Qelec
+                    df["nl_elec"] = boltz_elec_l / Qelec
                 else:
-                    # No electronic states (like CO, CO2) - factor = 1.0
                     df["nu_elec"] = 1.0
                     df["nl_elec"] = 1.0
 

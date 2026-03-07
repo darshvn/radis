@@ -1427,7 +1427,7 @@ class PartFuncTIPS(RovibParFuncTabulator):
                 }
                 raise KeyError(
                     "KeyError spotted! "
-                    + f"If you are computing GEISA spectra, this result might be because of an "
+                    + "If you are computing GEISA spectra, this result might be because of an "
                     + f"unsupported isotope. Currently isotope ID {GEISA_ns_iso[molecule]} "
                     + f"of molecule {molecule} is not supported by HAPI partitional function, "
                     + "thus stopping this spectrum calculation. Please select other isotopes "
@@ -2436,7 +2436,7 @@ class PartFuncExoMolStates(RovibParFuncCalculator):
         # If not available, fall back to decompressed file
         if states_bz2.exists():
             if self.verbose:
-                print(f"  Reading from .bz2 file to get quantum numbers")
+                print("  Reading from .bz2 file to get quantum numbers")
             df_states = read_states(
                 states_bz2,
                 dic_def,
@@ -2446,7 +2446,7 @@ class PartFuncExoMolStates(RovibParFuncCalculator):
         else:
             if self.verbose:
                 print(
-                    f"  Warning: .bz2 file not found, using cached file (no quantum numbers)"
+                    "  Warning: .bz2 file not found, using cached file (no quantum numbers)"
                 )
             df_states = read_states(
                 states_uncompressed, dic_def, engine="csv", skip_optional_data=True
