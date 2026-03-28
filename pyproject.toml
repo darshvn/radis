@@ -15,7 +15,7 @@ build-backend = "setuptools.build_meta"
 name = "radis"
 dynamic = ["version"]  # Version is read from radis/__version__.txt
 description = "A fast line-by-line code for high-resolution infrared molecular spectra"
-readme = "README.md"
+readme = {file = "README.rst", content-type = "text/x-rst"}
 authors = [
     {name = "Erwan Pannier"},
 ]

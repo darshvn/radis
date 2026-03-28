@@ -22,9 +22,9 @@ include radis/db/*.txt #Kurucz and NIST
 global-exclude */test/*
 global-exclude *test*.py
 
-# Exclude documentation
-global-exclude docs/*
-global-exclude *.rst
+# Exclude documentation (but keep top-level README.rst)
+prune docs
+global-exclude docs/*.rst
 
 # Exclude examples
-global-exclude examples/*
+prune examples
