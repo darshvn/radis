@@ -19,7 +19,7 @@ readme = {file = "README.rst", content-type = "text/x-rst"}
 authors = [
     {name = "Erwan Pannier"},
 ]
-license = {text = "GNU Lesser General Public License v3 (LGPLv3)"}
+license = "LGPL-3.0-or-later"
 keywords = [
     "spectrum",
     "infrared",
@@ -39,8 +39,7 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
-    "Topic :: Scientific/Engineering",
+"Topic :: Scientific/Engineering",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.10",   #DEV MESSAGE: end of life, October 2026, https://devguide.python.org/versions/.
     "Programming Language :: Python :: 3.11",

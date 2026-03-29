@@ -52,7 +52,6 @@ Calculate a CO equilibrium spectrum from the HITRAN database ::
     s.plot('radiance')
 
 .. figure:: https://radis.readthedocs.io/en/latest/_images/co_spectrum_700K.png
-    :scale: 60 %
 
 
 Advanced use
@@ -84,7 +83,6 @@ and compared with the `plot_diff <https://radis.readthedocs.io/en/latest/source/
 Typical output of `plot_diff <https://radis.readthedocs.io/en/latest/source/radis.spectrum.compare.html#radis.spectrum.compare.plot_diff>`__:
 
 .. image:: docs/spectrum/cdsd4000_vs_hitemp_3409K.svg
-    :scale: 60 %
     :target: https://radis.readthedocs.io/en/latest/spectrum/spectrum.html#compare-two-spectra
     :alt: https://radis.readthedocs.io/en/latest/_images/cdsd4000_vs_hitemp_3409K.svg
 
@@ -95,14 +93,14 @@ Refer to the `Examples <https://radis.readthedocs.io/en/latest/examples/examples
 GPU Acceleration
 ----------------
 
-RADIS supports GPU acceleration for super-fast computation of spectra. Refer to `GPU Spectrum Calculation on RADIS <https://radis.readthedocs.io/en/latest/lbl/lbl.html#calculating-spectrum-using-gpu>`__ for more details on GPU acceleration.::
+RADIS supports GPU acceleration for super-fast computation of spectra. Refer to `GPU Spectrum Calculation on RADIS <https://radis.readthedocs.io/en/latest/lbl/lbl.html#calculating-spectrum-using-gpu>`__ for more details on GPU acceleration.
 
 =======================================
 Try online (no installation needed!)
 =======================================
 
 🌱 Radis-app
----------
+-------------
 
 A simple `web-app <https://radis.app/>`__ for RADIS under development - `GitHub <https://github.com/suzil/radis-app>`__
 
@@ -112,7 +110,7 @@ A simple `web-app <https://radis.app/>`__ for RADIS under development - `GitHub 
 
 
 🔬 RADIS-lab
----------
+-------------
 
 An `online environment <https://github.com/radis/radis-lab>`__ for advanced spectrum processing and comparison with experimental data:
 
@@ -241,7 +239,6 @@ See `awesome-spectra <https://github.com/erwanp/awesome-spectra>`__   |badge_awe
 
 .. image:: https://github.com/radis/radis/blob/master/docs/radis_ico.png
     :target: https://radis.readthedocs.io/
-    :scale: 50 %
     :alt: RADIS logo
 
 
